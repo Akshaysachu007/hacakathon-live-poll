@@ -2,28 +2,36 @@ import { supabase } from "../supabase";
 
 const PROJECTS_TABLE = "projects";
 
-export async function getProjects() {
-    const { data, error } = await supabase
+export async function getProjects({ sortByVotes = true } = {}) {
+    let query = supabase
         .from(PROJECTS_TABLE)
-        .select(
-            `
-      id,
-      captain_name,
-      captain_image,
-      project_name,
-      description,
-      category,
-      vote_count,
-      created_at,
-      updated_at
-      `
-        )
-        .order("vote_count", { ascending: false })
-        .order("id", { ascending: true });
+        .select(`
+            id,
+            captain_name,
+            captain_image,
+            project_name,
+            description,
+            category,
+            vote_count,
+            created_at,
+            updated_at
+        `);
 
-    if (error) {
-        throw new Error(error.message);
+    if (sortByVotes) {
+        query = query
+            .order("vote_count", { ascending: false })
+            .order("id", { ascending: true });
+    } else {
+        // Stable order for the admin voting screen.
+        // Projects never move when their vote count changes.
+        query = query
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true });
     }
+
+    const { data, error } = await query;
+
+    if (error) throw new Error(error.message);
 
     return data ?? [];
 }

@@ -1,8 +1,8 @@
+
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import {
     AlertTriangle,
-    Award,
     CheckCircle2,
     Flag,
     LogOut,
@@ -27,10 +27,11 @@ import {
 import VoteCounter from "../components/VoteCounter";
 import ProjectForm from "../components/ProjectForm";
 
-function sortProjects(projects) {
+function stableProjectOrder(projects) {
     return [...projects].sort(
         (a, b) =>
-            b.vote_count - a.vote_count ||
+            new Date(a.created_at).getTime() -
+                new Date(b.created_at).getTime() ||
             a.id.localeCompare(b.id)
     );
 }
@@ -50,7 +51,10 @@ function WinnerConfirmModal({
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
             role="presentation"
             onMouseDown={(event) => {
-                if (event.target === event.currentTarget && !loading) {
+                if (
+                    event.target === event.currentTarget &&
+                    !loading
+                ) {
                     onCancel();
                 }
             }}
@@ -84,7 +88,7 @@ function WinnerConfirmModal({
 
                 <div className="px-6 py-6 sm:px-8">
                     <p className="text-sm leading-6 text-black/60">
-                        This will immediately show the current #1
+                        This will immediately show the selected
                         project on the public{" "}
                         <span className="font-semibold text-black">
                             /charts
@@ -97,7 +101,7 @@ function WinnerConfirmModal({
                             {project.captain_image ? (
                                 <img
                                     src={project.captain_image}
-                                    alt={`${project.captain_name} captain`}
+                                    alt={`${ project.captain_name } captain`}
                                     className="h-16 w-16 rounded-2xl object-cover"
                                 />
                             ) : (
@@ -108,7 +112,7 @@ function WinnerConfirmModal({
 
                             <div className="min-w-0 flex-1">
                                 <p className="text-xs font-semibold uppercase tracking-wider text-black/35">
-                                    Current #1
+                                    Selected winner
                                 </p>
 
                                 <h3 className="mt-1 truncate text-lg font-bold text-black">
@@ -171,6 +175,8 @@ function AdminDashboardPage() {
         logout,
     } = useAuth();
 
+    const navigate = useNavigate();
+
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -199,12 +205,16 @@ function AdminDashboardPage() {
 
         async function load() {
             try {
+                setLoading(true);
+                setError("");
+
                 const data = await getProjects();
 
                 if (!cancelled) {
-                    setProjects(sortProjects(data));
-                    setError("");
-                    setLoading(false);
+                    // IMPORTANT:
+                    // Admin always uses a stable project order.
+                    // Vote counts must never change the position.
+                    setProjects(stableProjectOrder(data));
                 }
             } catch (err) {
                 if (!cancelled) {
@@ -213,6 +223,9 @@ function AdminDashboardPage() {
                             ? err.message
                             : "Failed to load projects."
                     );
+                }
+            } finally {
+                if (!cancelled) {
                     setLoading(false);
                 }
             }
@@ -243,15 +256,26 @@ function AdminDashboardPage() {
     }
 
     function handleFormSuccess(savedProject) {
-        setProjects((current) =>
-            sortProjects([
-                ...current.filter(
-                    (project) =>
-                        project.id !== savedProject.id
-                ),
-                savedProject,
-            ])
-        );
+        setProjects((current) => {
+            const exists = current.some(
+                (project) => project.id === savedProject.id
+            );
+
+            if (exists) {
+                // Keep the edited project in its original position.
+                return current.map((project) =>
+                    project.id === savedProject.id
+                        ? {
+                              ...project,
+                              ...savedProject,
+                          }
+                        : project
+                );
+            }
+
+            // New project goes to the bottom.
+            return [...current, savedProject];
+        });
 
         setShowForm(false);
         setEditingProject(null);
@@ -265,16 +289,16 @@ function AdminDashboardPage() {
             const updatedProject =
                 await incrementProjectVotes(projectId);
 
+            // IMPORTANT:
+            // Do NOT sort after updating votes.
             setProjects((current) =>
-                sortProjects(
-                    current.map((project) =>
-                        project.id === projectId
-                            ? {
-                                ...project,
-                                ...updatedProject,
-                            }
-                            : project
-                    )
+                current.map((project) =>
+                    project.id === projectId
+                        ? {
+                              ...project,
+                              ...updatedProject,
+                          }
+                        : project
                 )
             );
         } catch (err) {
@@ -293,16 +317,16 @@ function AdminDashboardPage() {
             const updatedProject =
                 await decrementProjectVotes(projectId);
 
+            // IMPORTANT:
+            // Do NOT sort after updating votes.
             setProjects((current) =>
-                sortProjects(
-                    current.map((project) =>
-                        project.id === projectId
-                            ? {
-                                ...project,
-                                ...updatedProject,
-                            }
-                            : project
-                    )
+                current.map((project) =>
+                    project.id === projectId
+                        ? {
+                              ...project,
+                              ...updatedProject,
+                          }
+                        : project
                 )
             );
         } catch (err) {
@@ -327,16 +351,16 @@ function AdminDashboardPage() {
                     voteCount
                 );
 
+            // IMPORTANT:
+            // Do NOT sort after direct vote editing.
             setProjects((current) =>
-                sortProjects(
-                    current.map((project) =>
-                        project.id === projectId
-                            ? {
-                                ...project,
-                                ...updatedProject,
-                            }
-                            : project
-                    )
+                current.map((project) =>
+                    project.id === projectId
+                        ? {
+                              ...project,
+                              ...updatedProject,
+                          }
+                        : project
                 )
             );
         } catch (err) {
@@ -384,6 +408,10 @@ function AdminDashboardPage() {
     }
 
     function openWinnerConfirmation(project) {
+        if (!project) {
+            return;
+        }
+
         setError("");
         setWinnerCandidate(project);
     }
@@ -441,9 +469,6 @@ function AdminDashboardPage() {
         }
     }
 
-
-
-
     async function handleLogout() {
         try {
             await logout();
@@ -455,6 +480,20 @@ function AdminDashboardPage() {
             );
         }
     }
+
+    // Calculate the real current leader independently
+    // from the fixed admin display order.
+    const currentLeader =
+        projects.length > 0
+            ? projects.reduce(
+                  (leader, project) =>
+                      project.vote_count >
+                      leader.vote_count
+                          ? project
+                          : leader,
+                  projects[0]
+              )
+            : null;
 
     if (authLoading) {
         return (
@@ -488,8 +527,6 @@ function AdminDashboardPage() {
         );
     }
 
-    const winner = projects[0] ?? null;
-
     return (
         <main className="min-h-screen bg-white text-black">
             <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -511,16 +548,29 @@ function AdminDashboardPage() {
                                 </h1>
 
                                 <p className="mt-1 text-sm text-black/45">
-                                    Manage projects and official vote counts.
+                                    Manage projects and official vote
+                                    counts.
                                 </p>
                             </div>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3">
+                            {/* NEW: Leaderboard button */}
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    navigate("/leaderboard")
+                                }
+                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold text-black transition hover:bg-blue-700 hover:text-amber-50"
+                            >
+                                <Trophy className="h-4 w-4" />
+                                View Leaderboard
+                            </button>
+
                             <button
                                 type="button"
                                 onClick={handleAddProject}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-4 py-2.5 text-sm font-bold text-white transition hover:bg-black/85"
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-800"
                             >
                                 <Plus className="h-4 w-4" />
                                 Add Project
@@ -529,7 +579,7 @@ function AdminDashboardPage() {
                             <button
                                 type="button"
                                 onClick={handleLogout}
-                                className="inline-flex items-center gap-2 rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-black/5"
+                                className="inline-flex items-center gap-2 rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-red-400"
                             >
                                 <LogOut className="h-4 w-4" />
                                 Sign out
@@ -558,11 +608,11 @@ function AdminDashboardPage() {
                     </div>
                 )}
 
-                {/* Status row: current leader + live winner, side by side on larger screens */}
-                {(winner || winnerActive) && (
+                {/* Current leader + winner announcement */}
+                {(currentLeader || winnerActive) && (
                     <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                        {winner && (
-                            <section className="flex items-center justify-between gap-4 rounded-2xl border border-black/10 border-l-4 border-l-amber-400 bg-white px-5 py-4">
+                        {currentLeader && (
+                            <section className="flex flex-col gap-4 rounded-2xl border border-black/10 border-l-4 border-l-amber-400 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex min-w-0 items-center gap-3">
                                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
                                         <Trophy className="h-5 w-5" />
@@ -574,23 +624,44 @@ function AdminDashboardPage() {
                                         </p>
 
                                         <p className="mt-1 truncate font-semibold text-black">
-                                            {winner.project_name}
+                                            {
+                                                currentLeader.project_name
+                                            }
                                         </p>
 
                                         <p className="truncate text-sm text-black/45">
-                                            {winner.captain_name}
+                                            {
+                                                currentLeader.captain_name
+                                            }
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="shrink-0 text-right">
-                                    <p className="text-2xl font-black tabular-nums text-black">
-                                        {winner.vote_count}
-                                    </p>
+                                <div className="flex shrink-0 items-center gap-4">
+                                    <div className="text-right">
+                                        <p className="text-2xl font-black tabular-nums text-black">
+                                            {
+                                                currentLeader.vote_count
+                                            }
+                                        </p>
 
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-black/35">
-                                        votes
-                                    </p>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-black/35">
+                                            votes
+                                        </p>
+                                    </div>
+
+                                    {/* NEW: Fast winner button */}
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            openWinnerConfirmation(
+                                                currentLeader
+                                            )
+                                        }
+                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 px-4 py-2.5 text-sm font-bold text-black shadow-sm transition hover:from-amber-300 hover:via-yellow-300 hover:to-amber-400 hover:shadow-md">
+                                        <Trophy className="h-4 w-4" />
+                                        Make Winner
+                                    </button>
                                 </div>
                             </section>
                         )}
@@ -700,7 +771,7 @@ function AdminDashboardPage() {
                                                         src={
                                                             project.captain_image
                                                         }
-                                                        alt={`${project.captain_name} captain`}
+                                                        alt={`${ project.captain_name } captain`}
                                                         className="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-black/10"
                                                     />
                                                 ) : (
@@ -732,9 +803,8 @@ function AdminDashboardPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Vote controls + actions, grouped together */}
+                                            {/* Vote controls + actions */}
                                             <div className="flex flex-col gap-4 border-t border-black/10 pt-4 lg:flex-row lg:items-center lg:gap-6 lg:border-t-0 lg:pt-0">
-                                                {/* Enlarged vote counter */}
                                                 <div className="flex justify-center rounded-2xl bg-black/[0.03] px-3 py-2 lg:justify-start">
                                                     <VoteCounter
                                                         value={
@@ -761,7 +831,6 @@ function AdminDashboardPage() {
                                                     />
                                                 </div>
 
-                                                {/* Actions */}
                                                 <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-end">
                                                     <button
                                                         type="button"
@@ -824,3 +893,4 @@ function AdminDashboardPage() {
 }
 
 export default AdminDashboardPage;
+

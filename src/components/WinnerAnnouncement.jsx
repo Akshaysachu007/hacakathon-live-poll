@@ -5,7 +5,6 @@ import {
 } from "framer-motion";
 import {
     Trophy,
-    X,
     Sparkles,
 } from "lucide-react";
 
@@ -364,6 +363,7 @@ function WinnerAnnouncement({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.4 }}
+                    onClick={onClose} // <-- Added to allow closing when clicking outside
                 >
                     <RevealFlash />
 
@@ -419,6 +419,7 @@ function WinnerAnnouncement({
                         className="relative z-50 flex h-full w-full items-center justify-center px-4 py-4 sm:px-8"
                     >
                         <div
+                            onClick={(e) => e.stopPropagation()} // <-- Prevents clicks inside the modal from closing it
                             className="flex h-full max-h-[100dvh] w-full max-w-5xl flex-col items-center justify-center overflow-hidden rounded-[clamp(1.5rem,3vh,2.5rem)] border border-white/10 bg-white/[0.035] px-[clamp(1.25rem,4vw,3.5rem)] py-[clamp(1rem,3vh,2.5rem)] text-center shadow-[0_40px_140px_rgba(0,0,0,0.6)] backdrop-blur-xl"
                         >
                             {/* Label */}
@@ -467,7 +468,7 @@ function WinnerAnnouncement({
                                 <Trophy className="h-[45%] w-[45%]" />
                             </motion.div>
 
-                            {/* Winner heading */}
+                            {/* Winner heading - ADDED TROPHY ICONS HERE */}
                             <motion.h1
                                 initial={{
                                     opacity: 0,
@@ -485,9 +486,11 @@ function WinnerAnnouncement({
                                     delay: 0.42,
                                     duration: 0.75,
                                 }}
-                                className="mt-4 text-5xl font-black uppercase tracking-tight text-white sm:text-7xl lg:text-8xl"
+                                className="mt-4 flex items-center justify-center gap-3 text-5xl font-black uppercase tracking-tight text-white sm:gap-4 sm:text-7xl lg:text-8xl"
                             >
+                                <Trophy className="h-10 w-10 text-yellow-400 sm:h-14 sm:w-14 lg:h-16 lg:w-16" fill="currentColor" />
                                 Winner
+                                <Trophy className="h-10 w-10 text-yellow-400 sm:h-14 sm:w-14 lg:h-16 lg:w-16" fill="currentColor" />
                             </motion.h1>
 
                             {/* Captain image */}
@@ -541,6 +544,11 @@ function WinnerAnnouncement({
                                             ?
                                         </div>
                                     )}
+                                </div>
+
+                                {/* ADDED TROPHY BADGE HERE */}
+                                <div className="absolute -bottom-1 -right-1 z-10 flex h-10 w-10 items-center justify-center rounded-full border-[3px] border-black bg-gradient-to-br from-yellow-300 to-yellow-500 text-black shadow-lg sm:h-14 sm:w-14 sm:border-4">
+                                    <Trophy className="h-5 w-5 sm:h-7 sm:w-7" fill="currentColor" />
                                 </div>
                             </motion.div>
 
@@ -639,24 +647,7 @@ function WinnerAnnouncement({
                                 </p>
                             </motion.div>
 
-                            {/* Close */}
-                            <motion.button
-                                type="button"
-                                onClick={onClose}
-                                initial={{
-                                    opacity: 0,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                }}
-                                transition={{
-                                    delay: 1.2,
-                                }}
-                                className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-xs font-semibold text-white/65 transition hover:bg-white/10 hover:text-white sm:mt-7 sm:px-6 sm:py-3 sm:text-sm"
-                            >
-                                <X className="h-4 w-4" />
-                                Back to leaderboard
-                            </motion.button>
+                            {/* The "Back to leaderboard" button was removed from here */}
                         </div>
                     </motion.div>
                 </motion.div>

@@ -1,7 +1,14 @@
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Trophy } from "lucide-react";
+import {
+    motion,
+    AnimatePresence,
+} from "framer-motion";
+import {
+    Trophy,
+    BarChart3,
+} from "lucide-react";
+
 import { useProjects } from "../hooks/useProjects";
 import { supabase } from "../supabase";
 import WinnerAnnouncement from "../components/WinnerAnnouncement";
@@ -171,10 +178,17 @@ id,
 
     if (loading) {
         return (
-            <main className="flex min-h-screen items-center justify-center bg-black text-white">
-                <div className="flex items-center gap-3 text-lg text-neutral-400">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
-                    Loading live rankings...
+            <main className="min-h-screen bg-black text-white">
+                <div className="flex min-h-screen items-center justify-center px-6">
+                    <div className="text-center">
+                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-black shadow-sm">
+                            <BarChart3 className="h-6 w-6 animate-pulse" />
+                        </div>
+
+                        <p className="mt-5 text-sm font-medium text-gray-500">
+                            Loading live leaderboard...
+                        </p>
+                    </div>
                 </div>
             </main>
         );
@@ -212,6 +226,7 @@ id,
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#39FF88] opacity-75" />
                             <span className="relative inline-flex h-2 w-2 rounded-full bg-[#39FF88]" />
                         </span>
+
                         Live rankings
                     </div>
 
@@ -234,7 +249,8 @@ id,
                     <div
                         className="grid w-full items-end gap-2 px-1 pb-0 sm:gap-3"
                         style={{
-                            gridTemplateColumns: `repeat(${ projects.length }, minmax(0, 1fr))`,
+                            gridTemplateColumns:
+                                `repeat(${ projects.length }, minmax(0, 1fr))`,
                         }}
                     >
                         {projects.map((project, index) => {
@@ -244,7 +260,7 @@ id,
                                 (project.vote_count /
                                     maxVotes) *
                                     420,
-                                60
+                                150
                             );
 
                             // Detect the change since the last committed render.
@@ -311,7 +327,7 @@ id,
                                     {/* Captain image */}
                                     <motion.div
                                         layout
-                                        className="relative z-10 mb-[-20px] sm:mb-[-24px]"
+                                        className="relative z-30 mb-[-20px] sm:mb-[-24px]"
                                     >
                                         <img
                                             src={
@@ -369,7 +385,7 @@ id,
                                     <motion.div
                                         layout
                                         className={[
-                                            "relative flex w-full min-w-0 items-end justify-center overflow-hidden rounded-t-xl border-x border-t border-white/10 sm:rounded-t-2xl",
+                                            "relative z-0 flex w-full min-w-0 items-end justify-center overflow-hidden rounded-t-xl border-x border-t border-white/10 sm:rounded-t-2xl",
                                             "bg-gradient-to-t",
                                             rankStyle.bar,
                                         ].join(" ")}
@@ -403,7 +419,7 @@ id,
                                             },
                                         }}
                                     >
-                                        {/* Flash overlay that fires whenever votes increase */}
+                                        {/* Flash overlay */}
                                         <AnimatePresence>
                                             {delta > 0 && (
                                                 <motion.div
@@ -422,7 +438,7 @@ id,
                                                     transition={{
                                                         duration: 0.6,
                                                     }}
-                                                    className="pointer-events-none absolute inset-0 bg-white"
+                                                    className="pointer-events-none absolute inset-0 z-10 bg-white"
                                                 />
                                             )}
                                         </AnimatePresence>
@@ -450,14 +466,15 @@ id,
                                                         duration: 0.9,
                                                         ease: "easeOut",
                                                     }}
-                                                    className="absolute top-2 rounded-full bg-white px-2 py-0.5 text-xs font-black text-black"
+                                                    className="absolute top-2 z-20 rounded-full bg-white px-2 py-0.5 text-xs font-black text-black"
                                                 >
                                                     +{delta}
                                                 </motion.div>
                                             )}
                                         </AnimatePresence>
 
-                                        <div className="mb-4 text-center text-black sm:mb-5">
+                                        {/* Vote count - fixed to bottom */}
+                                        <div className="absolute bottom-4 left-0 right-0 z-20 text-center text-black sm:bottom-5">
                                             <AnimatePresence mode="popLayout">
                                                 <motion.div
                                                     key={
@@ -481,7 +498,7 @@ id,
                                                         stiffness: 400,
                                                         damping: 15,
                                                     }}
-                                                    className="text-xl font-black sm:text-3xl lg:text-4xl"
+                                                    className="text-xl font-black leading-none sm:text-3xl lg:text-4xl"
                                                 >
                                                     {
                                                         project.vote_count
@@ -489,7 +506,7 @@ id,
                                                 </motion.div>
                                             </AnimatePresence>
 
-                                            <div className="text-[8px] font-bold text-black/70 sm:text-[10px]">
+                                            <div className="mt-1 text-[8px] font-bold leading-none text-black/70 sm:text-[10px]">
                                                 votes
                                             </div>
                                         </div>
