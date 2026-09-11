@@ -1,11 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { useProjects } from "../hooks/useProjects";
 import { supabase } from "../supabase";
 import WinnerAnnouncement from "../components/WinnerAnnouncement";
-// A distinct vibrant color for every rank outside the top 3, so no two
-// bars ever look the same even as the leaderboard grows.
+
+// A distinct vibrant color for every rank outside the top 3,
+// so no two bars ever look the same even as the leaderboard grows.
 const PALETTE = [
     {
         bar: "from-[#39FF88] via-[#1FE07A] to-[#0FA968]",
@@ -65,15 +67,17 @@ function ChartLeaderboardPage() {
     } = useProjects();
 
     // Tracks each project's previous vote count so we can detect
-    // and animate deltas ("+N") the moment votes change. Updated
-    // in an effect (after commit), never mutated during render.
+    // and animate deltas ("+N") the moment votes change.
     const [prevVotes, setPrevVotes] = useState({});
     const [winner, setWinner] = useState(null);
+
     useEffect(() => {
         const next = {};
+
         projects.forEach((project) => {
             next[project.id] = project.vote_count;
         });
+
         setPrevVotes(next);
     }, [projects]);
 
@@ -83,20 +87,20 @@ function ChartLeaderboardPage() {
                 .from("winner_announcements")
                 .select(
                     `
-                id,
-                project_id,
-                announced_at,
-                active,
-                projects (
-                    id,
-                    captain_name,
-                    captain_image,
-                    project_name,
-                    description,
-                    category,
-                    vote_count
-                )
-                `
+id,
+    project_id,
+    announced_at,
+    active,
+    projects(
+        id,
+        captain_name,
+        captain_image,
+        project_name,
+        description,
+        category,
+        vote_count
+    )
+        `
                 )
                 .eq("active", true)
                 .order("announced_at", {
@@ -165,7 +169,6 @@ function ChartLeaderboardPage() {
         };
     }, []);
 
-
     if (loading) {
         return (
             <main className="flex min-h-screen items-center justify-center bg-black text-white">
@@ -201,8 +204,8 @@ function ChartLeaderboardPage() {
     );
 
     return (
-        <main className="min-h-screen overflow-x-auto bg-black px-5 py-8 text-white sm:px-8 lg:px-12">
-            <div className="mx-auto max-w-7xl">
+        <main className="min-h-screen w-full overflow-x-hidden bg-black px-3 py-8 text-white sm:px-5 lg:px-8">
+            <div className="mx-auto w-full max-w-7xl">
                 <header className="mb-12 text-center">
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-xs text-neutral-400">
                         <span className="relative flex h-2 w-2">
@@ -228,21 +231,27 @@ function ChartLeaderboardPage() {
                         </p>
                     </div>
                 ) : (
-                    <div className="flex min-w-max items-end justify-center gap-5 px-4 pb-0 sm:gap-8 lg:gap-10">
+                    <div
+                        className="grid w-full items-end gap-2 px-1 pb-0 sm:gap-3"
+                        style={{
+                            gridTemplateColumns: `repeat(${ projects.length }, minmax(0, 1fr))`,
+                        }}
+                    >
                         {projects.map((project, index) => {
                             const rank = index + 1;
 
                             const barHeight = Math.max(
                                 (project.vote_count /
                                     maxVotes) *
-                                420,
-                                70
+                                    420,
+                                60
                             );
 
                             // Detect the change since the last committed render.
                             const previousVotes =
                                 prevVotes[project.id] ??
                                 project.vote_count;
+
                             const delta =
                                 project.vote_count -
                                 previousVotes;
@@ -270,8 +279,8 @@ function ChartLeaderboardPage() {
                                                 badge: "bg-[#FF8F3C]",
                                             }
                                             : PALETTE[
-                                            (rank - 4) %
-                                            PALETTE.length
+                                                (rank - 4) %
+                                                PALETTE.length
                                             ];
 
                             return (
@@ -297,26 +306,24 @@ function ChartLeaderboardPage() {
                                             ],
                                         },
                                     }}
-                                    className="flex w-36 flex-col items-center sm:w-44 lg:w-52"
+                                    className="flex min-w-0 w-full flex-col items-center"
                                 >
                                     {/* Captain image */}
                                     <motion.div
                                         layout
-                                        className="relative z-10 mb-[-24px]"
+                                        className="relative z-10 mb-[-20px] sm:mb-[-24px]"
                                     >
                                         <img
                                             src={
                                                 project.captain_image
                                             }
-                                            alt={`${project.captain_name} captain`}
+                                            alt={`${ project.captain_name } captain`}
                                             className={[
-                                                "h-20 w-20 rounded-full object-cover",
-                                                "border-4 border-black bg-black ring-2",
+                                                "h-12 w-12 rounded-full object-cover",
+                                                "border-3 border-black bg-black ring-2",
                                                 rankStyle.ring,
                                                 rankStyle.glow,
-                                                smImageClass(
-                                                    rank
-                                                ),
+                                                smImageClass(rank),
                                             ].join(" ")}
                                         />
 
@@ -345,15 +352,15 @@ function ChartLeaderboardPage() {
 
                                         <div
                                             className={[
-                                                "absolute -bottom-2 left-1/2 flex h-7 min-w-7 -translate-x-1/2 items-center justify-center gap-1 rounded-full px-2",
-                                                "text-xs font-black text-white shadow-lg",
+                                                "absolute -bottom-2 left-1/2 flex h-6 min-w-6 -translate-x-1/2 items-center justify-center gap-1 rounded-full px-1.5 sm:h-7 sm:min-w-7 sm:px-2",
+                                                "text-[9px] font-black text-white shadow-lg sm:text-xs",
                                                 rankStyle.badge,
                                             ].join(" ")}
                                         >
                                             {rank === 1 ? (
-                                                <Trophy className="h-3.5 w-3.5" />
+                                                <Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                                             ) : (
-                                                `#${rank}`
+                                                `#${ rank } `
                                             )}
                                         </div>
                                     </motion.div>
@@ -362,7 +369,7 @@ function ChartLeaderboardPage() {
                                     <motion.div
                                         layout
                                         className={[
-                                            "relative flex w-full items-end justify-center overflow-hidden rounded-t-2xl border-x border-t border-white/10",
+                                            "relative flex w-full min-w-0 items-end justify-center overflow-hidden rounded-t-xl border-x border-t border-white/10 sm:rounded-t-2xl",
                                             "bg-gradient-to-t",
                                             rankStyle.bar,
                                         ].join(" ")}
@@ -424,7 +431,7 @@ function ChartLeaderboardPage() {
                                         <AnimatePresence>
                                             {delta > 0 && (
                                                 <motion.div
-                                                    key={`delta-${project.vote_count}`}
+                                                    key={`delta - ${ project.vote_count } `}
                                                     initial={{
                                                         opacity: 0,
                                                         y: 0,
@@ -450,7 +457,7 @@ function ChartLeaderboardPage() {
                                             )}
                                         </AnimatePresence>
 
-                                        <div className="mb-5 text-center text-black">
+                                        <div className="mb-4 text-center text-black sm:mb-5">
                                             <AnimatePresence mode="popLayout">
                                                 <motion.div
                                                     key={
@@ -474,7 +481,7 @@ function ChartLeaderboardPage() {
                                                         stiffness: 400,
                                                         damping: 15,
                                                     }}
-                                                    className="text-3xl font-black sm:text-4xl"
+                                                    className="text-xl font-black sm:text-3xl lg:text-4xl"
                                                 >
                                                     {
                                                         project.vote_count
@@ -482,28 +489,28 @@ function ChartLeaderboardPage() {
                                                 </motion.div>
                                             </AnimatePresence>
 
-                                            <div className="text-[10px] font-bold text-black/70">
+                                            <div className="text-[8px] font-bold text-black/70 sm:text-[10px]">
                                                 votes
                                             </div>
                                         </div>
                                     </motion.div>
 
                                     {/* Project details */}
-                                    <div className="mt-5 w-full text-center">
-                                        <h2 className="truncate text-lg font-black text-white sm:text-xl">
+                                    <div className="mt-3 w-full min-w-0 text-center sm:mt-5">
+                                        <h2 className="truncate text-xs font-black text-white sm:text-lg lg:text-xl">
                                             {
                                                 project.project_name
                                             }
                                         </h2>
 
-                                        <p className="mt-1 truncate text-sm text-neutral-400">
+                                        <p className="mt-1 truncate text-[10px] text-neutral-400 sm:text-sm">
                                             {
                                                 project.captain_name
                                             }
                                         </p>
 
                                         {project.category && (
-                                            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1 text-xs text-neutral-400">
+                                            <span className="mt-2 inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-white/15 px-2 py-1 text-[8px] text-neutral-400 sm:px-3 sm:text-xs">
                                                 {
                                                     project.category
                                                 }
@@ -516,6 +523,7 @@ function ChartLeaderboardPage() {
                     </div>
                 )}
             </div>
+
             <AnimatePresence>
                 {winner && (
                     <WinnerAnnouncement
@@ -530,8 +538,9 @@ function ChartLeaderboardPage() {
 
 function smImageClass(rank) {
     return rank <= 3
-        ? "sm:h-24 sm:w-24 lg:h-28 lg:w-28"
-        : "sm:h-20 sm:w-20 lg:h-24 lg:w-24";
+        ? "sm:h-20 sm:w-20 lg:h-24 lg:w-24"
+        : "sm:h-16 sm:w-16 lg:h-20 lg:w-20";
 }
 
 export default ChartLeaderboardPage;
+
