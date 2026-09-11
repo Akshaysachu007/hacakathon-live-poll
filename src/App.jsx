@@ -9,7 +9,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route
-          path="/"
+          path="/leaderboard"
           element={<LeaderboardPage />}
         />
 
@@ -28,7 +28,7 @@ function App() {
           element={<AdminDashboardPage />}
         />
         <Route
-          path="/charts"
+          path="/"
           element={<ChartLeaderboardPage />}
         />
 
