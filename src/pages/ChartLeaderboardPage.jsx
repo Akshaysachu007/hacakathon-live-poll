@@ -70,64 +70,33 @@ const PALETTE = [
 | Premium vote reveal configuration
 |--------------------------------------------------------------------------
 |
-| A new vote round does NOT immediately jump to the new database value.
+| A new vote round does NOT immediately jump to the new database values.
 |
-| Each project:
-|   1. Waits for a random amount of time.
-|   2. Starts counting.
-|   3. Adds votes one-by-one.
-|   4. Finishes within roughly 15–20 seconds.
+| Bars never move position - they stand exactly where they are - but for
+| ~15 seconds every bar's height/number flickers up and down at random.
+| The swing gradually narrows as the window closes, so it feels like the
+| board is "settling" rather than just glitching. Then, all at once, every
+| bar snaps to its real value and fires a boom.
 |
-| The important part is that the animation is driven by timeouts rather
-| than one giant Framer Motion animation. This keeps the page responsive.
+| The animation is driven by timeouts rather than one giant Framer Motion
+| animation, so the page stays responsive.
 |--------------------------------------------------------------------------
 */
 
-const MIN_REVEAL_TIME = 15000;
-const MAX_REVEAL_TIME = 20000;
+const SUSPENSE_DURATION = 15000; // total flicker window, ~15s
 
-const MIN_START_DELAY = 500;
-const MAX_START_DELAY = 6000;
+const MIN_TICK_INTERVAL = 450; // fastest a single bar can flicker
+const MAX_TICK_INTERVAL = 900; // slowest a single bar can flicker
 
-const MIN_STEP_INTERVAL = 120;
-const MAX_STEP_INTERVAL = 700;
+// A soft, "buttery" cubic-bezier used everywhere a value glides toward
+// its target, instead of a linear/easeOut snap.
+const BUTTER_EASE = [0.45, 0, 0.15, 1];
+
+const BOOM_DURATION = 900; // how long the boom burst stays on screen
 
 function randomBetween(min, max) {
     return Math.floor(
         Math.random() * (max - min + 1) + min
-    );
-}
-
-function getRandomRevealDuration() {
-    return randomBetween(
-        MIN_REVEAL_TIME,
-        MAX_REVEAL_TIME
-    );
-}
-
-function getRandomStartDelay() {
-    return randomBetween(
-        MIN_START_DELAY,
-        MAX_START_DELAY
-    );
-}
-
-function getStepInterval(delta, duration) {
-    if (delta <= 0) {
-        return 0;
-    }
-
-    const interval =
-        Math.floor(
-            (duration - 1000) / delta
-        );
-
-    return Math.min(
-        MAX_STEP_INTERVAL,
-        Math.max(
-            MIN_STEP_INTERVAL,
-            interval
-        )
     );
 }
 
@@ -143,9 +112,9 @@ function ChartLeaderboardPage() {
     | displayVotes
     |--------------------------------------------------------------------------
     |
-    | This is the number actually shown to viewers.
-    |
-    | The API/database value remains inside `projects`.
+    | This is the number actually shown to viewers - during the suspense
+    | window it randomly flickers, the API/database value stays in
+    | `projects`/`targetVotesRef`.
     |--------------------------------------------------------------------------
     */
 
@@ -158,7 +127,10 @@ function ChartLeaderboardPage() {
     |--------------------------------------------------------------------------
     */
 
-    const [animatingProjects, setAnimatingProjects] =
+    const [isRevealing, setIsRevealing] =
+        useState(false);
+
+    const [boomingProjects, setBoomingProjects] =
         useState({});
 
     /*
@@ -167,7 +139,7 @@ function ChartLeaderboardPage() {
     |--------------------------------------------------------------------------
     |
     | Refs prevent animation callbacks from becoming stale when Supabase
-    | sends another update during an existing animation.
+    | sends another update during an existing suspense round.
     |--------------------------------------------------------------------------
     */
 
@@ -175,9 +147,17 @@ function ChartLeaderboardPage() {
 
     const targetVotesRef = useRef({});
 
-    const animationIdsRef = useRef({});
+    const jitterTimersRef = useRef({});
 
-    const timersRef = useRef({});
+    const roundStopTimerRef = useRef(null);
+
+    const boomClearTimerRef = useRef(null);
+
+    const roundIdRef = useRef(0);
+
+    const roundStartRef = useRef(0);
+
+    const revealingRef = useRef(false);
 
     const initializedRef = useRef(false);
 
@@ -199,16 +179,27 @@ function ChartLeaderboardPage() {
 
     useEffect(() => {
         return () => {
-            Object.values(timersRef.current).forEach(
-                (timerSet) => {
-                    timerSet.forEach((timer) =>
-                        clearTimeout(timer)
-                    );
-                }
-            );
+            Object.values(
+                jitterTimersRef.current
+            ).forEach((timerList) => {
+                timerList.forEach((timer) =>
+                    clearTimeout(timer)
+                );
+            });
 
-            timersRef.current = {};
-            animationIdsRef.current = {};
+            jitterTimersRef.current = {};
+
+            if (roundStopTimerRef.current) {
+                clearTimeout(
+                    roundStopTimerRef.current
+                );
+            }
+
+            if (boomClearTimerRef.current) {
+                clearTimeout(
+                    boomClearTimerRef.current
+                );
+            }
         };
     }, []);
 
@@ -252,8 +243,7 @@ function ChartLeaderboardPage() {
 
             initializedRef.current = true;
 
-            displayVotesRef.current =
-                initialVotes;
+            displayVotesRef.current = initialVotes;
 
             setDisplayVotes(initialVotes);
 
@@ -266,6 +256,8 @@ function ChartLeaderboardPage() {
         --------------------------------------------------------------
         */
 
+        let hasIncrease = false;
+
         projects.forEach((project) => {
             const id = project.id;
 
@@ -276,45 +268,38 @@ function ChartLeaderboardPage() {
                 targetVotesRef.current[id];
 
             /*
-            New project:
-            Show its actual current vote count immediately.
+            New project: show its actual current vote count immediately,
+            no suspense just for showing up.
             */
 
-            if (
-                oldTarget === undefined
-            ) {
-                targetVotesRef.current[id] =
-                    newTarget;
+            if (oldTarget === undefined) {
+                targetVotesRef.current[id] = newTarget;
 
-                displayVotesRef.current[id] =
-                    newTarget;
+                displayVotesRef.current[id] = newTarget;
 
                 setDisplayVotes((current) => ({
                     ...current,
                     [id]: newTarget,
                 }));
 
+                if (revealingRef.current) {
+                    // Join the round already in progress.
+                    startJitterLoop(
+                        id,
+                        roundIdRef.current
+                    );
+                }
+
                 return;
             }
 
-            /*
-            No change.
-            */
-
-            if (oldTarget === newTarget) {
-                return;
+            if (newTarget > oldTarget) {
+                hasIncrease = true;
             }
 
-            /*
-            Store the latest real database target.
-            */
-
-            targetVotesRef.current[id] =
-                newTarget;
+            targetVotesRef.current[id] = newTarget;
 
             /*
-            Only animate upward changes.
-
             If votes somehow decrease, immediately synchronize the
             display rather than making viewers watch a fake countdown.
             */
@@ -324,27 +309,17 @@ function ChartLeaderboardPage() {
                     displayVotesRef.current[id]
                 ) || 0;
 
-            if (newTarget <= currentDisplayed) {
-                displayVotesRef.current[id] =
-                    newTarget;
+            if (
+                newTarget < currentDisplayed &&
+                !revealingRef.current
+            ) {
+                displayVotesRef.current[id] = newTarget;
 
                 setDisplayVotes((current) => ({
                     ...current,
                     [id]: newTarget,
                 }));
-
-                return;
             }
-
-            /*
-            Start the premium reveal.
-            */
-
-            startVoteReveal(
-                id,
-                currentDisplayed,
-                newTarget
-            );
         });
 
         /*
@@ -372,285 +347,207 @@ function ChartLeaderboardPage() {
 
             return next;
         });
+
+        Object.keys(targetVotesRef.current).forEach(
+            (id) => {
+                if (!currentIds.has(id)) {
+                    delete targetVotesRef.current[id];
+                }
+            }
+        );
+
+        /*
+        --------------------------------------------------------------
+        Kick off the board-wide suspense round.
+        --------------------------------------------------------------
+        Every bar currently on the board joins in, whether or not its
+        own value changed - that's what makes the reveal feel like a
+        single, cohesive "moment" instead of isolated bar updates.
+        --------------------------------------------------------------
+        */
+
+        if (hasIncrease && !revealingRef.current) {
+            startSuspenseRound(
+                Array.from(currentIds)
+            );
+        }
     }, [projects]);
 
     /*
     |--------------------------------------------------------------------------
-    | Start premium vote reveal
+    | Start the board-wide suspense round
     |--------------------------------------------------------------------------
     */
 
-    function startVoteReveal(
-        projectId,
-        startValue,
-        targetValue
-    ) {
-        /*
-        Cancel any previous animation for this project.
-        */
-
-        const existingTimers =
-            timersRef.current[projectId];
-
-        if (existingTimers) {
-            existingTimers.forEach((timer) =>
+    function startSuspenseRound(ids) {
+        Object.values(
+            jitterTimersRef.current
+        ).forEach((timerList) => {
+            timerList.forEach((timer) =>
                 clearTimeout(timer)
             );
+        });
+
+        jitterTimersRef.current = {};
+
+        if (roundStopTimerRef.current) {
+            clearTimeout(roundStopTimerRef.current);
         }
 
-        timersRef.current[projectId] = [];
-
-        /*
-        Generate a new animation ID.
-
-        This prevents an old animation callback from modifying the
-        display after a newer database update has arrived.
-        */
-
-        const animationId =
-            `${Date.now()}-${Math.random()}`;
-
-        animationIdsRef.current[projectId] =
-            animationId;
-
-        /*
-        Latest target.
-        */
-
-        targetVotesRef.current[projectId] =
-            targetValue;
-
-        /*
-        Number of votes that need to be revealed.
-        */
-
-        const delta =
-            targetValue - startValue;
-
-        if (delta <= 0) {
-            return;
+        if (boomClearTimerRef.current) {
+            clearTimeout(boomClearTimerRef.current);
         }
 
-        /*
-        Each project receives a different reveal duration.
+        const roundId = ++roundIdRef.current;
 
-        This makes the leaderboard feel less mechanical.
-        */
+        roundStartRef.current = Date.now();
+        revealingRef.current = true;
 
-        const revealDuration =
-            getRandomRevealDuration();
+        setIsRevealing(true);
+        setBoomingProjects({});
 
-        /*
-        Each project gets its own random start position.
+        ids.forEach((id) => {
+            startJitterLoop(id, roundId);
+        });
 
-        Therefore five projects receiving votes will not all start
-        counting at the exact same moment.
-        */
-
-        const startDelay =
-            getRandomStartDelay();
-
-        /*
-        Calculate how quickly individual votes should appear.
-
-        Large vote totals automatically use a smaller interval.
-        Small vote totals use a slower interval.
-        */
-
-        const stepInterval =
-            getStepInterval(
-                delta,
-                revealDuration
-            );
-
-        setAnimatingProjects((current) => ({
-            ...current,
-            [projectId]: true,
-        }));
-
-        /*
-        --------------------------------------------------------------
-        Start delay
-        --------------------------------------------------------------
-        */
-
-        const startTimer = setTimeout(() => {
-            /*
-            Ignore this animation if a newer one has started.
-            */
-
-            if (
-                animationIdsRef.current[
-                projectId
-                ] !== animationId
-            ) {
-                return;
-            }
-
-            /*
-            Count one vote at a time.
-            */
-
-            let currentValue =
-                Number(
-                    displayVotesRef.current[
-                    projectId
-                    ]
-                ) || 0;
-
-            function revealNextVote() {
-                /*
-                Check animation validity.
-                */
-
-                if (
-                    animationIdsRef.current[
-                    projectId
-                    ] !== animationId
-                ) {
-                    return;
-                }
-
-                /*
-                Always use the latest database target.
-
-                This means if another round/update arrives while this
-                animation is running, the animation will continue
-                toward the new target instead of getting stuck.
-                */
-
-                const latestTarget =
-                    Number(
-                        targetVotesRef.current[
-                        projectId
-                        ]
-                    ) || 0;
-
-                if (
-                    currentValue >=
-                    latestTarget
-                ) {
-                    finishVoteReveal(
-                        projectId,
-                        animationId,
-                        latestTarget
-                    );
-
-                    return;
-                }
-
-                /*
-                Increase exactly ONE vote.
-                */
-
-                currentValue += 1;
-
-                displayVotesRef.current[
-                    projectId
-                ] = currentValue;
-
-                setDisplayVotes((current) => ({
-                    ...current,
-                    [projectId]:
-                        currentValue,
-                }));
-
-                /*
-                If we've reached the target, finish.
-                */
-
-                if (
-                    currentValue >=
-                    latestTarget
-                ) {
-                    finishVoteReveal(
-                        projectId,
-                        animationId,
-                        latestTarget
-                    );
-
-                    return;
-                }
-
-                /*
-                Schedule the next individual vote.
-                */
-
-                const nextTimer =
-                    setTimeout(
-                        revealNextVote,
-                        stepInterval
-                    );
-
-                timersRef.current[
-                    projectId
-                ]?.push(nextTimer);
-            }
-
-            /*
-            Start the actual count.
-            */
-
-            revealNextVote();
-        }, startDelay);
-
-        timersRef.current[
-            projectId
-        ].push(startTimer);
+        roundStopTimerRef.current = setTimeout(() => {
+            finishSuspenseRound(roundId);
+        }, SUSPENSE_DURATION);
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Finish animation safely
+    | Per-bar flicker loop
+    |--------------------------------------------------------------------------
+    |
+    | Each bar ticks on its own random cadence so the whole board doesn't
+    | flicker in lockstep - that's what makes it feel alive instead of
+    | mechanical. The swing narrows toward the real value as the round
+    | approaches its end, like the board is settling before the reveal.
     |--------------------------------------------------------------------------
     */
 
-    function finishVoteReveal(
-        projectId,
-        animationId,
-        finalValue
-    ) {
-        if (
-            animationIdsRef.current[
-            projectId
-            ] !== animationId
-        ) {
+    function startJitterLoop(id, roundId) {
+        jitterTimersRef.current[id] =
+            jitterTimersRef.current[id] || [];
+
+        tick();
+
+        function tick() {
+            if (roundIdRef.current !== roundId) {
+                return;
+            }
+
+            const maxVotes = Math.max(
+                ...Object.values(
+                    targetVotesRef.current
+                ),
+                1
+            );
+
+            const target =
+                targetVotesRef.current[id] ?? 0;
+
+            const elapsed = Math.min(
+                1,
+                (Date.now() -
+                    roundStartRef.current) /
+                SUSPENSE_DURATION
+            );
+
+            // Wide swing early on, narrowing down to a gentle wobble
+            // by the time the round is about to end.
+            const spread = Math.max(
+                maxVotes * 0.06,
+                maxVotes * (1 - elapsed) * 0.85
+            );
+
+            const low = Math.max(
+                0,
+                Math.round(target - spread)
+            );
+
+            const high = Math.min(
+                maxVotes,
+                Math.round(target + spread)
+            );
+
+            const value = randomBetween(
+                low,
+                Math.max(low, high)
+            );
+
+            displayVotesRef.current[id] = value;
+
+            setDisplayVotes((current) => ({
+                ...current,
+                [id]: value,
+            }));
+
+            const nextTick = randomBetween(
+                MIN_TICK_INTERVAL,
+                MAX_TICK_INTERVAL
+            );
+
+            const timer = setTimeout(
+                tick,
+                nextTick
+            );
+
+            jitterTimersRef.current[id].push(
+                timer
+            );
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Finish the round - snap to real values and boom, all together
+    |--------------------------------------------------------------------------
+    */
+
+    function finishSuspenseRound(roundId) {
+        if (roundIdRef.current !== roundId) {
             return;
         }
 
-        displayVotesRef.current[
-            projectId
-        ] = finalValue;
-
-        setDisplayVotes((current) => ({
-            ...current,
-            [projectId]: finalValue,
-        }));
-
-        setAnimatingProjects((current) => {
-            const next = {
-                ...current,
-            };
-
-            delete next[projectId];
-
-            return next;
-        });
-
-        /*
-        Clear timers for this animation.
-        */
-
-        const timerSet =
-            timersRef.current[projectId];
-
-        if (timerSet) {
-            timerSet.forEach((timer) =>
+        Object.values(
+            jitterTimersRef.current
+        ).forEach((timerList) => {
+            timerList.forEach((timer) =>
                 clearTimeout(timer)
             );
-        }
+        });
 
-        timersRef.current[projectId] = [];
+        jitterTimersRef.current = {};
+
+        const finalVotes = {};
+
+        Object.keys(
+            targetVotesRef.current
+        ).forEach((id) => {
+            finalVotes[id] =
+                targetVotesRef.current[id];
+        });
+
+        displayVotesRef.current = finalVotes;
+
+        setDisplayVotes(finalVotes);
+        setIsRevealing(false);
+
+        revealingRef.current = false;
+
+        const boomFlags = {};
+
+        Object.keys(finalVotes).forEach((id) => {
+            boomFlags[id] = true;
+        });
+
+        setBoomingProjects(boomFlags);
+
+        boomClearTimerRef.current = setTimeout(() => {
+            setBoomingProjects({});
+        }, BOOM_DURATION);
     }
 
     /*
@@ -825,8 +722,8 @@ id,
     | maxVotes uses the REAL database values, not displayVotes.
     |
     | This allows the chart scale to already know where the final
-    | leaderboard is heading while the individual bars slowly reveal
-    | their vote counts.
+    | leaderboard is heading while the bars flicker through the
+    | suspense window.
     |--------------------------------------------------------------------------
     */
 
@@ -915,13 +812,13 @@ id,
 
                                 /*
                                 ------------------------------------------------
-                                Is this project currently revealing votes?
+                                Is this bar currently mid-boom?
                                 ------------------------------------------------
                                 */
 
-                                const isAnimating =
+                                const isBooming =
                                     Boolean(
-                                        animatingProjects[
+                                        boomingProjects[
                                         project.id
                                         ]
                                     );
@@ -1072,30 +969,30 @@ id,
                                             }}
                                             transition={{
                                                 height: {
-                                                    duration: 0.35,
-                                                    ease: "easeOut",
+                                                    duration: 0.85,
+                                                    ease: BUTTER_EASE,
                                                 },
                                             }}
                                         >
-                                            {/* 
-                                            Premium reveal glow.
+                                            {/*
+                                            Suspense flicker glow.
 
-                                            This is intentionally subtle so it
-                                            doesn't cause heavy animation or
-                                            lag while the number is counting.
+                                            Subtle pulsing overlay shown on
+                                            every bar while the board is
+                                            settling toward the reveal.
                                             */}
 
                                             <AnimatePresence>
-                                                {isAnimating && (
+                                                {isRevealing && (
                                                     <motion.div
-                                                        key="reveal-glow"
+                                                        key="flicker-glow"
                                                         initial={{
                                                             opacity: 0,
                                                         }}
                                                         animate={{
                                                             opacity: [
                                                                 0,
-                                                                0.22,
+                                                                0.2,
                                                                 0,
                                                             ],
                                                         }}
@@ -1103,18 +1000,54 @@ id,
                                                             opacity: 0,
                                                         }}
                                                         transition={{
-                                                            duration: 1.1,
+                                                            duration: 1.4,
                                                             repeat: Infinity,
-                                                            ease: "easeInOut",
+                                                            ease: BUTTER_EASE,
                                                         }}
                                                         className="pointer-events-none absolute inset-0 z-10 bg-white"
                                                     />
                                                 )}
                                             </AnimatePresence>
 
+                                            {/*
+                                            Boom burst.
+
+                                            Fires once, the instant the true
+                                            value snaps into place.
+                                            */}
+
+                                            <AnimatePresence>
+                                                {isBooming && (
+                                                    <motion.div
+                                                        key="boom-ring"
+                                                        initial={{
+                                                            scale: 0.6,
+                                                            opacity: 0.95,
+                                                        }}
+                                                        animate={{
+                                                            scale: 2.4,
+                                                            opacity: 0,
+                                                        }}
+                                                        exit={{
+                                                            opacity: 0,
+                                                        }}
+                                                        transition={{
+                                                            duration: 0.8,
+                                                            ease: "easeOut",
+                                                        }}
+                                                        className={[
+                                                            "pointer-events-none absolute inset-0 z-20 rounded-t-xl border-4 sm:rounded-t-2xl",
+                                                            rankStyle.ring,
+                                                        ].join(
+                                                            " "
+                                                        )}
+                                                    />
+                                                )}
+                                            </AnimatePresence>
+
                                             {/* Vote count */}
 
-                                            <div className="absolute bottom-4 left-0 right-0 z-20 text-center text-black sm:bottom-5">
+                                            <div className="absolute bottom-4 left-0 right-0 z-30 text-center text-black sm:bottom-5">
                                                 <AnimatePresence
                                                     mode="popLayout"
                                                 >
@@ -1123,16 +1056,27 @@ id,
                                                             visibleVotes
                                                         }
                                                         initial={{
-                                                            scale: 0.92,
-                                                            opacity: 0.6,
+                                                            scale: isBooming
+                                                                ? 0.4
+                                                                : 0.92,
+                                                            opacity: isBooming
+                                                                ? 0
+                                                                : 0.6,
                                                         }}
                                                         animate={{
-                                                            scale: 1,
+                                                            scale: isBooming
+                                                                ? [
+                                                                    1.6,
+                                                                    1,
+                                                                ]
+                                                                : 1,
                                                             opacity: 1,
                                                         }}
                                                         transition={{
-                                                            duration: 0.16,
-                                                            ease: "easeOut",
+                                                            duration: isBooming
+                                                                ? 0.6
+                                                                : 0.32,
+                                                            ease: BUTTER_EASE,
                                                         }}
                                                         className="text-xl font-black leading-none sm:text-3xl lg:text-4xl"
                                                     >

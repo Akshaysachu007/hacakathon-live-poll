@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+
 import {
     Flag,
     Users,
@@ -8,7 +8,7 @@ import {
     RefreshCw,
 } from "lucide-react";
 
-import { useAuth } from "../hooks/useAuth";
+
 import { getProjects } from "../api/projects";
 
 function stableProjectOrder(projects) {
@@ -21,7 +21,7 @@ function stableProjectOrder(projects) {
 }
 
 function VotingListPage() {
-    const { user, loading: authLoading } = useAuth();
+    
 
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -54,10 +54,6 @@ function VotingListPage() {
     }
 
     useEffect(() => {
-        if (!user) {
-            return;
-        }
-
         void loadProjects();
 
         const interval = setInterval(() => {
@@ -67,24 +63,11 @@ function VotingListPage() {
         return () => {
             clearInterval(interval);
         };
-    }, [user]);
+    }, []);
 
-    if (authLoading) {
-        return (
-            <main className="flex min-h-screen items-center justify-center bg-[#f7f7f5] px-6">
-                <div className="text-center">
-                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-black/10 border-t-black" />
-                    <p className="mt-4 text-sm text-black/50">
-                        Checking your session...
-                    </p>
-                </div>
-            </main>
-        );
-    }
+    
 
-    if (!user) {
-        return <Navigate to="/admin" replace />;
-    }
+    
 
     if (loading) {
         return (
