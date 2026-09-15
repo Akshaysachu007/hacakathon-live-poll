@@ -739,7 +739,7 @@ function AdminDashboardPage() {
             {/* ===================================================== */}
 
             <div className="sticky top-0 z-30 border-b border-black/10 bg-white/85 backdrop-blur-md">
-                <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+                <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black text-white">
                             <Flag className="h-5 w-5" />
@@ -755,7 +755,80 @@ function AdminDashboardPage() {
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    {/* Actions — compact stacked layout below lg, single row from lg up */}
+                    <div className="flex flex-col gap-2 lg:hidden">
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setError("");
+                                    setShowVoteRound(true);
+                                }}
+                                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 text-xs font-bold text-amber-700 transition hover:bg-amber-100"
+                            >
+                                <Trophy className="h-4 w-4" />
+                                Vote Round
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleAddProject}
+                                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-black px-3 text-xs font-bold text-white transition hover:bg-black/85"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Add Project
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <div className="flex flex-1 items-center gap-1 rounded-xl border border-black/10 bg-black/[0.02] p-1">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        navigate("/leaderboard")
+                                    }
+                                    className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold text-black/70 transition hover:bg-white hover:text-black hover:shadow-sm"
+                                >
+                                    <Trophy className="h-4 w-4" />
+                                    Leaders
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        navigate("/admin/rounds")
+                                    }
+                                    className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold text-black/70 transition hover:bg-white hover:text-black hover:shadow-sm"
+                                >
+                                    <CirclePlus className="h-4 w-4" />
+                                    Rounds
+                                </button>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setError("");
+                                    setShowResetHackathon(true);
+                                }}
+                                aria-label="Reset hackathon"
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100"
+                            >
+                                <RotateCcw className="h-4 w-4" />
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                aria-label="Sign out"
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-black/10 bg-white text-black/60 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                            >
+                                <LogOut className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="hidden flex-wrap items-center gap-2 lg:flex">
                         <div className="flex items-center gap-1 rounded-xl border border-black/10 bg-black/[0.02] p-1">
                             <button
                                 type="button"
@@ -784,7 +857,7 @@ function AdminDashboardPage() {
                             </button>
                         </div>
 
-                        <div className="mx-1 hidden h-6 w-px bg-black/10 sm:block" />
+                        <div className="mx-1 h-6 w-px bg-black/10" />
 
                         <button
                             type="button"
@@ -818,9 +891,7 @@ function AdminDashboardPage() {
                             className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-600 transition hover:bg-red-100 sm:text-sm"
                         >
                             <RotateCcw className="h-4 w-4" />
-                            <span className="hidden md:inline">
-                                Reset
-                            </span>
+                            <span>Reset</span>
                         </button>
 
                         <button
@@ -830,15 +901,13 @@ function AdminDashboardPage() {
                             className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-black/10 bg-white px-3 text-xs font-semibold text-black/60 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 sm:text-sm"
                         >
                             <LogOut className="h-4 w-4" />
-                            <span className="hidden md:inline">
-                                Sign out
-                            </span>
+                            <span>Sign out</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+            <div className="mx-auto w-full max-w-[1500px] px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
 
                 {/* ===================================================== */}
                 {/* ERROR */}
@@ -948,7 +1017,7 @@ function AdminDashboardPage() {
                                     type="button"
                                     onClick={handleCancelWinner}
                                     disabled={cancellingWinner}
-                                    className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl bg-black px-5 text-xs font-bold text-white transition hover:bg-black/85 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+                                    className="inline-flex min-h-10 w-full shrink-0 items-center justify-center rounded-xl bg-black px-5 text-xs font-bold text-white transition hover:bg-black/85 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:text-sm"
                                 >
                                     {cancellingWinner
                                         ? "Closing..."
@@ -981,7 +1050,7 @@ function AdminDashboardPage() {
                                                 currentLeader
                                             )
                                         }
-                                        className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 px-5 text-xs font-black text-black shadow-sm transition hover:from-amber-300 hover:via-yellow-300 hover:to-amber-400 hover:shadow-md sm:text-sm"
+                                        className="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 px-5 text-xs font-black text-black shadow-sm transition hover:from-amber-300 hover:via-yellow-300 hover:to-amber-400 hover:shadow-md sm:w-auto sm:text-sm"
                                     >
                                         <Trophy className="h-4 w-4" />
                                         Make Winner
@@ -998,7 +1067,7 @@ function AdminDashboardPage() {
 
                 {showForm && (
                     <div
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-md sm:p-6"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-md sm:p-6"
                         role="presentation"
                         onMouseDown={(event) => {
                             if (
@@ -1012,10 +1081,10 @@ function AdminDashboardPage() {
                             role="dialog"
                             aria-modal="true"
                             aria-labelledby="project-form-title"
-                            className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-black/10 bg-white shadow-2xl"
+                            className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-2xl sm:rounded-3xl"
                         >
                             {/* Modal header */}
-                            <div className="flex items-center justify-between border-b border-black/10 px-5 py-5 sm:px-7">
+                            <div className="flex items-start justify-between gap-3 border-b border-black/10 px-4 py-4 sm:px-7 sm:py-5">
                                 <div className="min-w-0">
                                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/35 sm:text-xs">
                                         Project management
@@ -1023,7 +1092,7 @@ function AdminDashboardPage() {
 
                                     <h2
                                         id="project-form-title"
-                                        className="mt-1 text-xl font-black tracking-tight text-black sm:text-2xl"
+                                        className="mt-1 truncate text-lg font-black tracking-tight text-black sm:text-2xl"
                                     >
                                         {editingProject
                                             ? "Edit Project"
@@ -1040,7 +1109,7 @@ function AdminDashboardPage() {
                                 <button
                                     type="button"
                                     onClick={handleFormCancel}
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/10 bg-white text-black/50 transition hover:bg-black/5 hover:text-black"
+                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-black/10 bg-white text-black/50 transition hover:bg-black/5 hover:text-black sm:h-10 sm:w-10"
                                     aria-label="Close"
                                 >
                                     <span className="text-xl leading-none">
@@ -1050,7 +1119,7 @@ function AdminDashboardPage() {
                             </div>
 
                             {/* Form */}
-                            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
+                            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-7 sm:py-6">
                                 <ProjectForm
                                     project={editingProject}
                                     onSuccess={handleFormSuccess}
@@ -1140,7 +1209,7 @@ function AdminDashboardPage() {
                                             key={
                                                 project.id
                                             }
-                                            className="px-4 py-4 transition hover:bg-black/[0.012] sm:px-6 sm:py-5 lg:grid lg:grid-cols-[3rem_minmax(0,2fr)_minmax(0,1.1fr)_auto] lg:items-center lg:gap-5"
+                                            className="px-3 py-4 transition hover:bg-black/[0.012] sm:px-6 sm:py-5 lg:grid lg:grid-cols-[3rem_minmax(0,2fr)_minmax(0,1.1fr)_auto] lg:items-center lg:gap-5"
                                         >
                                             {/* Rank — desktop */}
                                             <div className="hidden text-sm font-black text-black/30 lg:block">
@@ -1193,7 +1262,7 @@ function AdminDashboardPage() {
                                             </div>
 
                                             {/* Vote counter */}
-                                            <div className="mt-3 flex justify-center rounded-xl bg-black/[0.02] p-2 lg:mt-0 lg:justify-start lg:bg-transparent lg:p-0">
+                                            <div className="mt-3 flex justify-center overflow-x-auto rounded-xl bg-black/[0.02] p-2 lg:mt-0 lg:justify-start lg:overflow-visible lg:bg-transparent lg:p-0">
                                                 <VoteCounter
                                                     value={
                                                         project.vote_count
