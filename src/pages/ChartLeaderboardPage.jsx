@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
     motion,
     AnimatePresence,
@@ -70,13 +70,14 @@ const PALETTE = [
 | Premium vote reveal configuration
 |--------------------------------------------------------------------------
 |
-| A new vote round does NOT immediately jump to the new database values.
+| A new vote round does NOT immediately jump to the new database values,
+| and it does NOT immediately re-sort the board either.
 |
-| Bars never move position - they stand exactly where they are - but for
-| ~15 seconds every bar's height/number flickers up and down at random.
-| The swing gradually narrows as the window closes, so it feels like the
-| board is "settling" rather than just glitching. Then, all at once, every
-| bar snaps to its real value and fires a boom.
+| Bars stay exactly where they are for the whole suspense window while
+| their height/number flickers up and down at random, narrowing as the
+| window closes. Then, at the very last second, everything happens at
+| once: the true order and the true values snap into place together and
+| every bar fires a boom.
 |
 | The animation is driven by timeouts rather than one giant Framer Motion
 | animation, so the page stays responsive.
@@ -92,7 +93,7 @@ const MAX_TICK_INTERVAL = 900; // slowest a single bar can flicker
 // its target, instead of a linear/easeOut snap.
 const BUTTER_EASE = [0.45, 0, 0.15, 1];
 
-const BOOM_DURATION = 900; // how long the boom burst stays on screen
+const BOOM_DURATION = 2000; // how long the boom burst stays on screen
 
 function randomBetween(min, max) {
     return Math.floor(
@@ -107,19 +108,36 @@ function ChartLeaderboardPage() {
         error,
     } = useProjects();
 
+    const projectsById = useMemo(() => {
+        const map = {};
+
+        (projects || []).forEach((project) => {
+            map[project.id] = project;
+        });
+
+        return map;
+    }, [projects]);
+
     /*
     |--------------------------------------------------------------------------
-    | displayVotes
+    | displayVotes / renderOrder
     |--------------------------------------------------------------------------
     |
-    | This is the number actually shown to viewers - during the suspense
-    | window it randomly flickers, the API/database value stays in
-    | `projects`/`targetVotesRef`.
+    | displayVotes is what's actually shown to viewers - during the
+    | suspense window it randomly flickers, the API/database value stays
+    | in `projects`/`targetVotesRef`.
+    |
+    | renderOrder is the order bars are drawn in. It's frozen for the
+    | whole suspense window and only re-synced to the real, current
+    | ranking at the moment of the boom - see the comment above.
     |--------------------------------------------------------------------------
     */
 
     const [displayVotes, setDisplayVotes] =
         useState({});
+
+    const [renderOrder, setRenderOrder] =
+        useState([]);
 
     /*
     |--------------------------------------------------------------------------
@@ -146,6 +164,10 @@ function ChartLeaderboardPage() {
     const displayVotesRef = useRef({});
 
     const targetVotesRef = useRef({});
+
+    const renderOrderRef = useRef([]);
+
+    const latestOrderRef = useRef([]);
 
     const jitterTimersRef = useRef({});
 
@@ -213,11 +235,26 @@ function ChartLeaderboardPage() {
         if (!projects || projects.length === 0) {
             if (!initializedRef.current) {
                 setDisplayVotes({});
+                setRenderOrder([]);
                 displayVotesRef.current = {};
+                renderOrderRef.current = [];
+                latestOrderRef.current = [];
             }
 
             return;
         }
+
+        /*
+        --------------------------------------------------------------
+        Always track the real, current order - this is the ground
+        truth the board will eventually snap to. It's separate from
+        what's actually rendered while a round is in progress.
+        --------------------------------------------------------------
+        */
+
+        latestOrderRef.current = projects.map(
+            (project) => project.id
+        );
 
         /*
         --------------------------------------------------------------
@@ -226,7 +263,7 @@ function ChartLeaderboardPage() {
         Never animate the initial leaderboard.
 
         This is important because refreshing /charts should always show
-        the actual current database values.
+        the actual current database values, in the actual current order.
         --------------------------------------------------------------
         */
 
@@ -244,8 +281,11 @@ function ChartLeaderboardPage() {
             initializedRef.current = true;
 
             displayVotesRef.current = initialVotes;
+            renderOrderRef.current =
+                latestOrderRef.current;
 
             setDisplayVotes(initialVotes);
+            setRenderOrder(latestOrderRef.current);
 
             return;
         }
@@ -300,8 +340,9 @@ function ChartLeaderboardPage() {
             targetVotesRef.current[id] = newTarget;
 
             /*
-            If votes somehow decrease, immediately synchronize the
-            display rather than making viewers watch a fake countdown.
+            If votes somehow decrease outside of a round, immediately
+            synchronize the display rather than making viewers watch a
+            fake countdown.
             */
 
             const currentDisplayed =
@@ -324,7 +365,7 @@ function ChartLeaderboardPage() {
 
         /*
         --------------------------------------------------------------
-        Remove deleted projects from the displayed state.
+        Remove deleted projects from the displayed vote state.
         --------------------------------------------------------------
         */
 
@@ -358,11 +399,18 @@ function ChartLeaderboardPage() {
 
         /*
         --------------------------------------------------------------
-        Kick off the board-wide suspense round.
+        Kick off the board-wide suspense round, or keep the board's
+        rendered order frozen while one is already running.
         --------------------------------------------------------------
         Every bar currently on the board joins in, whether or not its
         own value changed - that's what makes the reveal feel like a
         single, cohesive "moment" instead of isolated bar updates.
+
+        Crucially: renderOrder is only touched here when NOT mid-round.
+        The instant a round starts (or is already running), the board
+        keeps showing its last stable order - the real, re-sorted
+        order only lands at finishSuspenseRound, in the same beat as
+        the boom.
         --------------------------------------------------------------
         */
 
@@ -370,6 +418,11 @@ function ChartLeaderboardPage() {
             startSuspenseRound(
                 Array.from(currentIds)
             );
+        } else if (!revealingRef.current) {
+            renderOrderRef.current =
+                latestOrderRef.current;
+
+            setRenderOrder(latestOrderRef.current);
         }
     }, [projects]);
 
@@ -502,7 +555,7 @@ function ChartLeaderboardPage() {
 
     /*
     |--------------------------------------------------------------------------
-    | Finish the round - snap to real values and boom, all together
+    | Finish the round - snap order + values and boom, all together
     |--------------------------------------------------------------------------
     */
 
@@ -531,8 +584,13 @@ function ChartLeaderboardPage() {
         });
 
         displayVotesRef.current = finalVotes;
+        renderOrderRef.current =
+            latestOrderRef.current;
 
+        // Order and values land in the exact same state update, so the
+        // re-sort and the reveal happen on the same visual beat.
         setDisplayVotes(finalVotes);
+        setRenderOrder(latestOrderRef.current);
         setIsRevealing(false);
 
         revealingRef.current = false;
@@ -737,6 +795,10 @@ id,
         1
     );
 
+    const orderedIds = renderOrder.length
+        ? renderOrder
+        : projects.map((project) => project.id);
+
     return (
         <main className="min-h-screen w-full overflow-x-hidden bg-black px-3 py-8 text-white sm:px-5 lg:px-8">
             <div className="mx-auto w-full max-w-7xl">
@@ -770,14 +832,18 @@ id,
                         className="grid w-full items-end gap-2 px-1 pb-0 sm:gap-3"
                         style={{
                             gridTemplateColumns:
-                                `repeat(${projects.length}, minmax(0, 1fr))`,
+                                `repeat(${orderedIds.length}, minmax(0, 1fr))`,
                         }}
                     >
-                        {projects.map(
-                            (
-                                project,
-                                index
-                            ) => {
+                        {orderedIds.map(
+                            (id, index) => {
+                                const project =
+                                    projectsById[id];
+
+                                if (!project) {
+                                    return null;
+                                }
+
                                 const rank =
                                     index + 1;
 
@@ -1013,7 +1079,7 @@ id,
                                             Boom burst.
 
                                             Fires once, the instant the true
-                                            value snaps into place.
+                                            order and value snap into place.
                                             */}
 
                                             <AnimatePresence>
