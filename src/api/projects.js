@@ -159,3 +159,192 @@ export async function cancelWinnerAnnouncement() {
 
     return data;
 }
+
+
+export async function submitVoteRound(roundEntries) {
+    if (!Array.isArray(roundEntries)) {
+        throw new Error("Round entries must be an array.");
+    }
+
+    const cleanedEntries = roundEntries.map((entry) => {
+        const votes = Number(entry.votes);
+
+        if (!entry.project_id) {
+            throw new Error("Project ID is required.");
+        }
+
+        if (!Number.isInteger(votes) || votes < 0) {
+            throw new Error(
+                "Each project's round vote count must be a non-negative integer."
+            );
+        }
+
+        return {
+            project_id: entry.project_id,
+            votes,
+        };
+    });
+
+    const { data, error } = await supabase.rpc(
+        "submit_vote_round",
+        {
+            round_entries: cleanedEntries,
+        }
+    );
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+
+
+export async function getVoteRounds() {
+    const { data, error } = await supabase
+        .from("vote_rounds")
+        .select(`
+            id,
+            round_number,
+            created_at,
+            created_by,
+            vote_round_entries (
+                id,
+                project_id,
+                votes,
+                created_at,
+                projects (
+                    id,
+                    project_name,
+                    captain_name,
+                    captain_image,
+                    category,
+                    vote_count
+                )
+            )
+        `)
+        .order("round_number", {
+            ascending: false,
+        });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data ?? [];
+}
+
+export async function getVoteRound(roundId) {
+    const { data, error } = await supabase
+        .from("vote_rounds")
+        .select(`
+            id,
+            round_number,
+            created_at,
+            created_by,
+            vote_round_entries (
+                id,
+                project_id,
+                votes,
+                created_at,
+                projects (
+                    id,
+                    project_name,
+                    captain_name,
+                    captain_image,
+                    category,
+                    vote_count
+                )
+            )
+        `)
+        .eq("id", roundId)
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+
+
+export async function updateVoteRound(
+    roundId,
+    roundEntries
+) {
+    if (!roundId) {
+        throw new Error("Round ID is required.");
+    }
+
+    if (!Array.isArray(roundEntries)) {
+        throw new Error(
+            "Round entries must be an array."
+        );
+    }
+
+    const cleanedEntries = roundEntries.map((entry) => {
+        const votes = Number(entry.votes);
+
+        if (!entry.project_id) {
+            throw new Error("Project ID is required.");
+        }
+
+        if (!Number.isInteger(votes) || votes < 0) {
+            throw new Error(
+                "Each project's vote count must be a non-negative integer."
+            );
+        }
+
+        return {
+            project_id: entry.project_id,
+            votes,
+        };
+    });
+
+    const { data, error } = await supabase.rpc(
+        "update_vote_round",
+        {
+            target_round_id: roundId,
+            updated_entries: cleanedEntries,
+        }
+    );
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+export async function deleteVoteRound(roundId) {
+    if (!roundId) {
+        throw new Error("Round ID is required.");
+    }
+
+    const { data, error } = await supabase.rpc(
+        "delete_vote_round",
+        {
+            target_round_id: roundId,
+        }
+    );
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}
+
+
+
+export async function resetHackathon() {
+    const { data, error } = await supabase.rpc("reset_hackathon");
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+}

@@ -4,6 +4,7 @@ import AdminDashboardPage from "./pages/AdminDashboardPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import DisplayPage from "./pages/DisplayPage";
 import ChartLeaderboardPage from "./pages/ChartLeaderboardPage";
+import RoundHistoryPage from "./pages/RoundHistoryPage";
 function App() {
   return (
     <BrowserRouter>
@@ -30,6 +31,11 @@ function App() {
         <Route
           path="/"
           element={<ChartLeaderboardPage />}
+        />
+
+        <Route
+          path="/admin/rounds"
+          element={<RoundHistoryPage />}
         />
 
       </Routes>

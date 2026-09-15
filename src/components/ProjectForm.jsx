@@ -345,9 +345,10 @@ function ProjectForm({
     return (
         <form
             onSubmit={handleSubmit}
-            className="space-y-6 rounded-[2rem] border border-black/10 bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.06)] sm:p-8"
+            className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_10px_40px_rgba(0,0,0,0.06)]"
         >
-            <div className="flex items-start justify-between gap-4 border-b border-black/10 pb-6">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4 border-b border-black/10 px-6 py-6 sm:px-8">
                 <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-black/40">
                         {isEditing
@@ -367,196 +368,217 @@ function ProjectForm({
                 </div>
             </div>
 
-            {error && (
-                <div
-                    role="alert"
-                    className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-                >
-                    {error}
-                </div>
-            )}
-
-            <div className="grid gap-5 lg:grid-cols-2">
-                {/* Project name */}
-                <div className="lg:col-span-2">
-                    <label
-                        htmlFor="project-name"
-                        className={LABEL_CLASS}
+            {/* Body */}
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-6 sm:px-8">
+                {error && (
+                    <div
+                        role="alert"
+                        className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
                     >
-                        Project name
-                    </label>
+                        {error}
+                    </div>
+                )}
 
-                    <input
-                        id="project-name"
-                        type="text"
-                        value={projectName}
-                        onChange={(event) =>
-                            setProjectName(
-                                event.target.value
-                            )
-                        }
-                        placeholder="e.g. Smart Campus"
-                        maxLength={150}
-                        required
-                        disabled={loading}
-                        className={FIELD_CLASS}
-                    />
-                </div>
+                <div className="space-y-8">
+                    {/* Section: project details */}
+                    <div>
+                        <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.16em] text-black/35">
+                            Project details
+                        </p>
 
-                {/* Captain name */}
-                <div>
-                    <label
-                        htmlFor="captain-name"
-                        className={LABEL_CLASS}
-                    >
-                        <User className="h-3.5 w-3.5 text-black/40" />
-                        Captain name
-                    </label>
+                        <div className="grid gap-5 lg:grid-cols-2">
+                            <div className="lg:col-span-2">
+                                <label
+                                    htmlFor="project-name"
+                                    className={LABEL_CLASS}
+                                >
+                                    Project name
+                                </label>
 
-                    <input
-                        id="captain-name"
-                        type="text"
-                        value={captainName}
-                        onChange={(event) =>
-                            setCaptainName(
-                                event.target.value
-                            )
-                        }
-                        placeholder="e.g. Rahul Kumar"
-                        maxLength={150}
-                        required
-                        disabled={loading}
-                        className={FIELD_CLASS}
-                    />
-                </div>
+                                <input
+                                    id="project-name"
+                                    type="text"
+                                    value={projectName}
+                                    onChange={(event) =>
+                                        setProjectName(
+                                            event.target.value
+                                        )
+                                    }
+                                    placeholder="e.g. Smart Campus"
+                                    maxLength={150}
+                                    required
+                                    disabled={loading}
+                                    className={FIELD_CLASS}
+                                />
+                            </div>
 
-                {/* Category */}
-                <div>
-                    <label
-                        htmlFor="category"
-                        className={LABEL_CLASS}
-                    >
-                        Category
-                    </label>
+                            <div>
+                                <label
+                                    htmlFor="captain-name"
+                                    className={LABEL_CLASS}
+                                >
+                                    <User className="h-3.5 w-3.5 text-black/40" />
+                                    Captain name
+                                </label>
 
-                    <input
-                        id="category"
-                        type="text"
-                        value={category}
-                        onChange={(event) =>
-                            setCategory(
-                                event.target.value
-                            )
-                        }
-                        placeholder="e.g. AI / Web / IoT"
-                        maxLength={100}
-                        disabled={loading}
-                        className={FIELD_CLASS}
-                    />
-                </div>
+                                <input
+                                    id="captain-name"
+                                    type="text"
+                                    value={captainName}
+                                    onChange={(event) =>
+                                        setCaptainName(
+                                            event.target.value
+                                        )
+                                    }
+                                    placeholder="e.g. Rahul Kumar"
+                                    maxLength={150}
+                                    required
+                                    disabled={loading}
+                                    className={FIELD_CLASS}
+                                />
+                            </div>
 
-                {/* Description */}
-                <div className="lg:col-span-2">
-                    <label
-                        htmlFor="description"
-                        className={LABEL_CLASS}
-                    >
-                        Description
-                    </label>
+                            <div>
+                                <label
+                                    htmlFor="category"
+                                    className={LABEL_CLASS}
+                                >
+                                    Category
+                                </label>
 
-                    <textarea
-                        id="description"
-                        value={description}
-                        onChange={(event) =>
-                            setDescription(
-                                event.target.value
-                            )
-                        }
-                        placeholder="Brief project description..."
-                        maxLength={1000}
-                        rows={4}
-                        disabled={loading}
-                        className={`${FIELD_CLASS} resize-none`}
-                    />
-                </div>
+                                <input
+                                    id="category"
+                                    type="text"
+                                    value={category}
+                                    onChange={(event) =>
+                                        setCategory(
+                                            event.target.value
+                                        )
+                                    }
+                                    placeholder="e.g. AI / Web / IoT"
+                                    maxLength={100}
+                                    disabled={loading}
+                                    className={FIELD_CLASS}
+                                />
+                            </div>
 
-                {/* Vote count */}
-                <div>
-                    <label
-                        htmlFor="vote-count"
-                        className={LABEL_CLASS}
-                    >
-                        <Vote className="h-3.5 w-3.5 text-black/40" />
-                        Vote count
-                    </label>
+                            <div className="lg:col-span-2">
+                                <label
+                                    htmlFor="description"
+                                    className={LABEL_CLASS}
+                                >
+                                    Description
+                                </label>
 
-                    <input
-                        id="vote-count"
-                        type="number"
-                        min="0"
-                        step="1"
-                        inputMode="numeric"
-                        value={voteCount}
-                        onChange={(event) =>
-                            setVoteCount(
-                                event.target.value
-                            )
-                        }
-                        required
-                        disabled={loading}
-                        className={FIELD_CLASS}
-                    />
+                                <textarea
+                                    id="description"
+                                    value={description}
+                                    onChange={(event) =>
+                                        setDescription(
+                                            event.target.value
+                                        )
+                                    }
+                                    placeholder="Brief project description..."
+                                    maxLength={1000}
+                                    rows={4}
+                                    disabled={loading}
+                                    className={`${FIELD_CLASS} resize-none`}
+                                />
+                            </div>
+                        </div>
+                    </div>
 
-                    <p className="mt-2 text-xs text-black/40">
-                        Votes cannot be negative.
-                    </p>
-                </div>
+                    {/* Section: voting */}
+                    <div className="border-t border-black/10 pt-8">
+                        <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.16em] text-black/35">
+                            Voting
+                        </p>
 
-                {/* Image */}
-                <div>
-                    <label
-                        htmlFor="captain-image"
-                        className={LABEL_CLASS}
-                    >
-                        <ImagePlus className="h-3.5 w-3.5 text-black/40" />
-                        Captain image
-                    </label>
+                        <div className="max-w-xs">
+                            <label
+                                htmlFor="vote-count"
+                                className={LABEL_CLASS}
+                            >
+                                <Vote className="h-3.5 w-3.5 text-black/40" />
+                                Vote count
+                            </label>
 
-                    <input
-                        id="captain-image"
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                        onChange={handleImageChange}
-                        required={!isEditing}
-                        disabled={loading}
-                        className="block w-full rounded-xl border border-black/15 bg-white px-3 py-3 text-sm text-black/60 outline-none transition file:mr-4 file:rounded-lg file:border-0 file:bg-black file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-black/80 disabled:opacity-40"
-                    />
+                            <input
+                                id="vote-count"
+                                type="number"
+                                min="0"
+                                step="1"
+                                inputMode="numeric"
+                                value={voteCount}
+                                onChange={(event) =>
+                                    setVoteCount(
+                                        event.target.value
+                                    )
+                                }
+                                required
+                                disabled={loading}
+                                className={FIELD_CLASS}
+                            />
 
-                    <p className="mt-2 text-xs text-black/40">
-                        JPG, PNG, or WebP. Maximum 5 MB.
-                    </p>
+                            <p className="mt-2 text-xs text-black/40">
+                                Votes cannot be negative.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Section: captain image */}
+                    <div className="border-t border-black/10 pt-8">
+                        <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.16em] text-black/35">
+                            Captain photo
+                        </p>
+
+                        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                            <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-black/10 bg-black/[0.02]">
+                                {imagePreview ? (
+                                    <img
+                                        src={imagePreview}
+                                        alt={`${captainName || "Captain"} preview`}
+                                        className="h-full w-full object-cover"
+                                    />
+                                ) : (
+                                    <ImagePlus className="h-6 w-6 text-black/25" />
+                                )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                                <label
+                                    htmlFor="captain-image"
+                                    className={LABEL_CLASS}
+                                >
+                                    <ImagePlus className="h-3.5 w-3.5 text-black/40" />
+                                    {imagePreview
+                                        ? imageFile
+                                            ? "New image selected"
+                                            : "Current image"
+                                        : "Upload image"}
+                                </label>
+
+                                <input
+                                    id="captain-image"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                    onChange={handleImageChange}
+                                    required={!isEditing}
+                                    disabled={loading}
+                                    className="block w-full rounded-xl border border-black/15 bg-white px-3 py-3 text-sm text-black/60 outline-none transition file:mr-4 file:rounded-lg file:border-0 file:bg-black file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-black/80 disabled:opacity-40"
+                                />
+
+                                <p className="mt-2 text-xs text-black/40">
+                                    JPG, PNG, or WebP. Maximum 5 MB.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Image preview */}
-            {imagePreview && (
-                <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4">
-                    <p className="mb-3 text-sm font-semibold text-black/70">
-                        {imageFile
-                            ? "New image preview"
-                            : "Current image"}
-                    </p>
-
-                    <img
-                        src={imagePreview}
-                        alt={`${captainName || "Captain"} preview`}
-                        className="h-40 w-40 rounded-2xl object-cover ring-1 ring-black/10"
-                    />
-                </div>
-            )}
-
             {/* Actions */}
-            <div className="flex flex-col-reverse gap-3 border-t border-black/10 pt-6 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t border-black/10 bg-black/[0.015] px-6 py-5 sm:flex-row sm:justify-end sm:px-8">
                 {onCancel && (
                     <button
                         type="button"

@@ -567,7 +567,7 @@ function WinnerAnnouncement({
                                 }}
                                 className="mt-5 text-3xl font-semibold text-white sm:text-5xl"
                             >
-                                {project.captain_name}
+                                {project.project_name}
                             </motion.p>
 
                             {/* Project */}
@@ -585,7 +585,7 @@ function WinnerAnnouncement({
                                 }}
                                 className="mt-2 max-w-3xl text-lg text-white/50 sm:text-2xl lg:text-3xl"
                             >
-                                {project.project_name}
+                                {project.captain_name}
                             </motion.p>
 
                             {/* Category */}
