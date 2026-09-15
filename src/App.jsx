@@ -5,6 +5,7 @@ import LeaderboardPage from "./pages/LeaderboardPage";
 import DisplayPage from "./pages/DisplayPage";
 import ChartLeaderboardPage from "./pages/ChartLeaderboardPage";
 import RoundHistoryPage from "./pages/RoundHistoryPage";
+import VotingListPage from "./pages/VotingListPage";
 function App() {
   return (
     <BrowserRouter>
@@ -36,6 +37,10 @@ function App() {
         <Route
           path="/admin/rounds"
           element={<RoundHistoryPage />}
+        />
+        <Route
+          path="/voting-list"
+          element={<VotingListPage />}
         />
 
       </Routes>
